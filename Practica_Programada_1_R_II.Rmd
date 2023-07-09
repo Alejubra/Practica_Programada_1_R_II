@@ -1,0 +1,189 @@
+---
+title: "Practica_Programada_1"
+author: "Alejandra Ureña Bravo"
+date: "2023-07-08"
+output: html_document
+---
+
+a. Cree un archivo Rmarkdown para resolver esta práctica programada. En el chunk de setup cargue las librerías que considere necesarias para resolver la práctica. Los datos para trabajar puede cargarlos con la función read_csv2 de readr directamente de la siguiente dirección: “https://raw.githubusercontent.
+com/isa229/programacion_analisis_datos_ii/main/netflix_info.csv” (1pto)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tidyr)# doma de datos
+library(janitor) #limpieza de datos
+library(lubridate)
+library(hms)
+```
+
+```{r}
+netflix_info <- "https://raw.githubusercontent.com/isa229/programacion_analisis_datos_ii/main/netflix_info.csv"
+netflix_info <- read.csv2(netflix_info)
+```
+
+b. Ajuste los nombres de las columnas para que estén en español. (2pts)
+
+```{r}
+datos_netflix_espanol <- netflix_info |> 
+  rename("id_programa" = "show_id", #nuevo nombre = viejo nombre 
+         "tipo" = "type",
+         "titulo" = "title", 
+         "pais" = "country",
+         "fecha_agregada" = "date_added",
+         "anio_lanzamiento" = "release_year",
+         "clasificacion" ="rating",
+         "duracion" = "duration",
+         "listado_en" = "listed_in")
+```
+
+c. Elimine filas duplicadas. (2pts)
+
+### Examina filas duplicadas
+
+```{r}
+filas_netflix_duplicadas <- datos_netflix_espanol |>  
+  janitor::get_dupes() |> 
+  distinct()
+```
+## Eliminar duplicados
+
+
+```{r}
+datos_netflix_deduplicados <- datos_netflix_espanol |> 
+  distinct()
+```
+
+```{r}
+glimpse(datos_netflix_deduplicados)
+```
+
+d. Elimine filas y columnas vacías. (2pts)
+
+
+## Detección y tratamiento de datos faltantes
+
+- Reemplazar valores "vacíos" con NA
+
+
+```{r}
+datos_netflix_sin_vacios <- datos_netflix_deduplicados |> 
+  mutate(across(where(is.character), function(x) na_if(x, "")))
+```
+
+
+```{r}
+datos_netflix_sin_vacios_1 <- datos_netflix_deduplicados |> 
+  remove_empty(which = c("rows", "cols"))
+```
+
+e. Elimine la variable correspondiente al año de lanzamiento (release_year.) (2pts)
+
+```{r}
+datos_netflix_sin_anio_lanzamiento <- datos_netflix_sin_vacios_1 |> 
+  select(-anio_lanzamiento)
+```
+
+f. Haga una inspección de las variables type y country para determinar si hay observaciones mal escritas o escritas de diferentes maneras. Si es así, haga la limpieza para poder homogenizar esos datos. (10pts)
+
+## Transformación de datos
+
+En muchos casos adicionalmente, es posible que necesitemos hacer una transformación de
+nuestros datos. Por ejemplo, en este caso, observamos que en la columna presento_sintomas
+tenemos los siguientes valores en la tabla:
+
+```{r}
+datos_netflix_sin_anio_lanzamiento |> 
+  distinct(tipo, pais)
+```
+
+
+```{r}
+datos_netflix_2 <- datos_netflix_sin_anio_lanzamiento |> 
+  mutate (tipo = case_when(tipo == "movie" ~ "Movie",
+tipo == "tv show" ~ "TV Show",
+TRUE ~ tipo)) |> 
+mutate (pais = case_when(pais == "united states" ~ "United States",
+pais == "pakistan" ~ "Pakistan",
+pais == "india" ~ "India",
+TRUE ~ pais)) 
+```
+
+
+```{r}
+datos_netflix_2 |> 
+  distinct(tipo, pais)
+```
+
+g. Para todas las columnas de tipo carácter, en donde haya NA, coloque “Sin información”. (4pts)
+
+```{r}
+datos_netflix_2_con_na <- datos_netflix_2 |> 
+  mutate_all(na_if, "")
+```
+
+- Reemplazar los NA por otros valores
+
+
+```{r}
+datos_netflix_2_sin_vacios <-  datos_netflix_2_con_na |>  
+  mutate(across(c(id_programa, tipo, titulo, director, pais, fecha_agregada, clasificacion, duracion, listado_en), function(x) ifelse(is.na(x), "Sin información", x)))
+```
+
+h. Añada a su conjunto de datos una nueva columna llamada anyo que indique el año en que el show o
+película fue añadido a Netflix. Añada también una columna llamada mes que indique el mes en que el
+show o película fue añadido a Netflix. (6pts)
+
+
+```{r}
+datos_netflix_limpio <- datos_netflix_2_sin_vacios |> 
+  mutate(Fecha = mdy(fecha_agregada))
+
+datos_netflix_limpio <- datos_netflix_limpio |> 
+  mutate(Año = year(Fecha))
+
+datos_netflix_limpio <- datos_netflix_limpio |> 
+  mutate(Mes = month(Fecha))
+```
+
+
+Lo que ordena el código anterior es: Reemplace valores NA de la columna xx con la frase sin información. 
+
+Cuando son variables numéricas se sustituye por promedios por ejemplo.
+
+Cuando son muchas variables las que se deben sustituir, se usa una libreria poor (dato a no olvidar, xq no profundizaremos acerca de esti en clases, lo que hace es reescribir sobre una función.)
+
+
+
+## Tip adicional sobre valores faltantes
+
+En otros casos donde los datos contienen variables numéricas, puede ser de utilidad
+reemplazar los NA por la media o el promedio de los datos. Para ilustrar esto suponga
+el siguiente conjunto de datos que muestra las notas obtenidas en fisica, quimica
+y matematica por 3 estudiantes:
+ 
+```{r}
+notas <- data.frame( Name = c("Bruno", "Emilio", "Jay", "Carla"),
+   fisica = c(98, 87, 91, 94),
+   quimica = c(NA, 84, 93, 87),
+   matematica = c(91, 86, NA, NA) )
+```
+
+Si quisiéramos llenar estos NA con valores numéricos, podríamos incluir la mediana
+de los datos de esta manera:
+(imputar)
+
+```{r}
+# usamos mutate para añadir una columna con la mediana por persona
+
+notas_con_media <- notas |> 
+  rowwise() |> #indica que la operación debe hacerse por fila
+  mutate(median_score = median(c(fisica, quimica, matematica), na.rm = TRUE))
+
+# reemplazamos na con la media
+notas_sin_na <- notas_con_media |> 
+  mutate(across(c(fisica, quimica, matematica), ~ ifelse(is.na(.), median_score, .))) #si alguna de las observaciones es na escriba la media
+```
+si las observaciones en quimica, fisica y mate, alguna es NA deje la mediana.
