@@ -139,51 +139,59 @@ show o película fue añadido a Netflix. (6pts)
 
 ```{r}
 datos_netflix_limpio <- datos_netflix_2_sin_vacios |> 
-  mutate(Fecha = mdy(fecha_agregada))
+  mutate(fecha = mdy(fecha_agregada))
 
 datos_netflix_limpio <- datos_netflix_limpio |> 
-  mutate(Año = year(Fecha))
+  mutate(anio = year(fecha))
 
 datos_netflix_limpio <- datos_netflix_limpio |> 
-  mutate(Mes = month(Fecha))
+  mutate(mes = month(fecha))
 ```
+Una vez que haya terminado la limpieza anterior, responda las siguientes preguntas:
 
-
-Lo que ordena el código anterior es: Reemplace valores NA de la columna xx con la frase sin información. 
-
-Cuando son variables numéricas se sustituye por promedios por ejemplo.
-
-Cuando son muchas variables las que se deben sustituir, se usa una libreria poor (dato a no olvidar, xq no profundizaremos acerca de esti en clases, lo que hace es reescribir sobre una función.)
-
-
-
-## Tip adicional sobre valores faltantes
-
-En otros casos donde los datos contienen variables numéricas, puede ser de utilidad
-reemplazar los NA por la media o el promedio de los datos. Para ilustrar esto suponga
-el siguiente conjunto de datos que muestra las notas obtenidas en fisica, quimica
-y matematica por 3 estudiantes:
- 
-```{r}
-notas <- data.frame( Name = c("Bruno", "Emilio", "Jay", "Carla"),
-   fisica = c(98, 87, 91, 94),
-   quimica = c(NA, 84, 93, 87),
-   matematica = c(91, 86, NA, NA) )
-```
-
-Si quisiéramos llenar estos NA con valores numéricos, podríamos incluir la mediana
-de los datos de esta manera:
-(imputar)
+i. Cuántas películas y shows de TV hay por país? (4pts)
 
 ```{r}
-# usamos mutate para añadir una columna con la mediana por persona
-
-notas_con_media <- notas |> 
-  rowwise() |> #indica que la operación debe hacerse por fila
-  mutate(median_score = median(c(fisica, quimica, matematica), na.rm = TRUE))
-
-# reemplazamos na con la media
-notas_sin_na <- notas_con_media |> 
-  mutate(across(c(fisica, quimica, matematica), ~ ifelse(is.na(.), median_score, .))) #si alguna de las observaciones es na escriba la media
+Datos_netflix_por_tipo_pais  <- datos_netflix_limpio |> 
+  group_by(tipo, pais) |> 
+  count()
 ```
-si las observaciones en quimica, fisica y mate, alguna es NA deje la mediana.
+
+j. Cuáles son los 10 directores con mayor cantidad de películas (sin contar shows de TV) en Netflix?
+Ordénelos por orden descendente. (4pts)
+
+```{r}
+datos_netflix_10_directores_movie <- datos_netflix_limpio |> 
+  filter(tipo == "Movie") |>   
+  group_by(director) |> 
+   count() |> 
+   arrange(desc(n)) |>
+    head(10)
+```
+
+
+k. Cuáles son los 10 directores con mayor cantidad de shows de TV (sin contar películas) en Netflix?
+Ordénelos por orden descendente. (4pts)
+
+```{r}
+datos_netflix_10_directores_tv_show <- datos_netflix_limpio |> 
+  filter(tipo == "TV Show") |>   
+  group_by(director) |> 
+   count() |> 
+   arrange(desc(n)) |>
+    head(10)
+```
+
+l. Obtenga la lista de películas y shows de TV que se añadieron en marzo del año 2020. Cuántos fueron?
+(4pts)
+
+
+```{r}
+datos_netflix_movie_tv_show_marzo_2020 <- datos_netflix_limpio |> 
+  filter(anio == 2020 & mes == 3) |>
+  group_by(tipo) |> 
+   count() |> 
+   arrange(desc(n))
+```
+
+La cantidad de películas y shows de TV que se añadieron en marzo del año 2020, fueron 93 y 44 respectivamente.
